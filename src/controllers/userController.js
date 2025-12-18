@@ -4,14 +4,14 @@ const bcrypt = require("bcrypt");
 
 const { generateJWT, verifyJWT } = require("../utils/generateToken");
 
-const verificationMail = require("../utils/sendEmail");
+const { verificationMail, accountCreatedMail } = require("../utils/sendEmail");
 
 async function register(req, res) {
     try {
         const { name, email, password, phone, gender } =
             req.body;
 
-        if (!name || !email || !password || !gender)
+        if (!name || !email || !password)
             return res.status(400).json({
                 success: false,
                 message: "Please fill all the required fields",
@@ -46,9 +46,18 @@ async function register(req, res) {
             profileModel: "Patient",
         });
 
-        const token = await generateJWT({ id: newUser._id });
-
-        await verificationMail(newUser.email, token);
+        if (req.user && (req.user.role.name === 'admin' || req.user.role.name === 'receptionist')) {
+            await accountCreatedMail(newUser.email, {
+                name: newUser.name,
+                email: newUser.email,
+                password: password
+            });
+            newUser.isVerified = true;
+            await newUser.save();
+        } else {
+            const token = await generateJWT({ id: newUser._id });
+            await verificationMail(newUser.email, token);
+        }
 
         return res.status(201).json({
             success: true,
@@ -242,7 +251,23 @@ async function updateProfile(req, res) {
 
 async function getAllUsers(req, res) {
     try {
-        const users = await User.find()
+        const { role } = req.query;
+        let query = {};
+
+        if (role) {
+            const roleDoc = await Role.findOne({ name: role });
+            if (roleDoc) {
+                query.role = roleDoc._id;
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    count: 0,
+                    users: [],
+                });
+            }
+        }
+
+        const users = await User.find(query)
             .populate("role")
             .populate("profile")
             .select("-password");

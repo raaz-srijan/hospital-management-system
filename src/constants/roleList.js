@@ -5,3 +5,5 @@ const roleList = [
   { name: "receptionist", profileModel: "ReceptionistProfile" },
   { name: "patient", profileModel: "PatientProfile" },
 ];
+
+module.exports = roleList;
