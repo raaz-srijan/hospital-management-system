@@ -1,13 +1,8 @@
 const { verifyJWT } = require("../utils/generateToken");
 const User = require("../models/userSchema");
 
-/**
- * Authentication Middleware
- * Verifies JWT token and attaches user to request object
- */
 async function authenticate(req, res, next) {
     try {
-        // Get token from header
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -17,10 +12,8 @@ async function authenticate(req, res, next) {
             });
         }
 
-        // Extract token
         const token = authHeader.split(" ")[1];
 
-        // Verify token
         const decoded = await verifyJWT(token);
 
         if (!decoded) {
@@ -30,7 +23,6 @@ async function authenticate(req, res, next) {
             });
         }
 
-        // Find user and populate role with permissions
         const user = await User.findOne({ email: decoded.email })
             .populate({
                 path: "role",
@@ -48,7 +40,6 @@ async function authenticate(req, res, next) {
             });
         }
 
-        // Check if user is verified
         if (!user.isVerified) {
             return res.status(403).json({
                 success: false,
@@ -56,7 +47,6 @@ async function authenticate(req, res, next) {
             });
         }
 
-        // Attach user to request
         req.user = user;
         next();
 

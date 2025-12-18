@@ -13,7 +13,6 @@ const { authorizeRoles } = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-// Receptionist profile routes (authenticated receptionist only)
 router.post("/profile", authenticate, authorizeRoles("receptionist"), createOrUpdateReceptionistProfile);
 router.get("/profile", authenticate, authorizeRoles("receptionist"), getReceptionistProfile);
 router.put("/shifts", authenticate, authorizeRoles("receptionist"), updateReceptionistShifts);
