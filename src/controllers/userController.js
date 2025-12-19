@@ -4,7 +4,8 @@ const bcrypt = require("bcrypt");
 
 const { generateJWT, verifyJWT } = require("../utils/generateToken");
 
-const { verificationMail, accountCreatedMail } = require("../utils/sendEmail");
+const { generateHash, otpVerify } = require("../utils/generateOtp");
+const { verificationMail, accountCreatedMail, verifyOTPMail } = require("../utils/sendEmail");
 
 async function register(req, res) {
     try {
@@ -90,15 +91,7 @@ async function login(req, res) {
                 message: "Please fill all the required fields",
             });
 
-        const checkUser = await User.findOne({ email })
-            .select("+password")
-            .populate({
-                path: "role",
-                populate: {
-                    path: "permissions",
-                },
-            })
-            .populate("profile");
+        const checkUser = await User.findOne({ email }).select("+password");
 
         if (!checkUser)
             return res
@@ -112,6 +105,58 @@ async function login(req, res) {
                 .status(400)
                 .json({ success: false, message: "Incorrect email or password" });
 
+        // Generate OTP
+        const { otp, hash } = generateHash(checkUser.phone); // Using phone for hash salt/validity
+
+        // Send OTP via Email
+        await verifyOTPMail(checkUser.email, otp);
+
+        return res.status(200).json({
+            success: true,
+            message: "OTP sent to your email",
+            otpSent: true,
+            email: checkUser.email,
+            phone: checkUser.phone, // Send phone back as it's needed for verification hash check
+            hash
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message,
+        });
+    }
+}
+
+async function verifyLoginOtp(req, res) {
+    try {
+        const { email, otp, hash, phone } = req.body;
+
+        if (!email || !otp || !hash || !phone) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
+        }
+
+        const verifyResult = otpVerify(otp, hash, phone);
+
+        if (!verifyResult.success) {
+            return res.status(400).json({ success: false, message: verifyResult.message || "Invalid OTP" });
+        }
+
+        // OTP Verified, now return Token
+        const user = await User.findOne({ email })
+            .populate({
+                path: "role",
+                populate: {
+                    path: "permissions",
+                },
+            })
+            .populate("profile");
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
         const token = await generateJWT({ email });
 
         return res.status(200).json({
@@ -119,16 +164,17 @@ async function login(req, res) {
             message: "Logged in successfully!",
             token,
             user: {
-                id: checkUser._id,
-                name: checkUser.name,
-                email: checkUser.email,
-                phone: checkUser.phone,
-                gender: checkUser.gender,
-                role: checkUser.role,
-                profile: checkUser.profile,
-                profileModel: checkUser.profileModel,
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                gender: user.gender,
+                role: user.role,
+                profile: user.profile,
+                profileModel: user.profileModel,
             },
         });
+
     } catch (error) {
         return res.status(500).json({
             success: false,
@@ -350,4 +396,5 @@ module.exports = {
     deleteUser,
     updateUserRole,
     verifyEmail,
+    verifyLoginOtp
 };

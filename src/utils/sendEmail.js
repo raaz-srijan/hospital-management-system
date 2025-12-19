@@ -89,14 +89,14 @@ const verificationMail = async (to, token) => {
 
 
 
-  const accountCreatedMail = async (to, { name, email, password }) => {
-    const frontendUrl =
-      process.env.FRONTEND_URL || "http://localhost:5173";
-    const appName = "Healing Care";
+const accountCreatedMail = async (to, { name, email, password }) => {
+  const frontendUrl =
+    process.env.FRONTEND_URL || "http://localhost:5173";
+  const appName = "Healing Care";
 
-    const loginUrl = `${frontendUrl}/auth/login`;
+  const loginUrl = `${frontendUrl}/auth/login`;
 
-    const html = `
+  const html = `
   <div style="font-family: Inter, Arial, sans-serif; background-color:#f8fafc; padding:40px 0;">
     <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
       
@@ -158,21 +158,70 @@ const verificationMail = async (to, token) => {
   </div>
   `;
 
-    const mailOptions = {
-      to,
-      subject: `Account Created – ${appName}`,
-      html,
-      from: `"${appName}" <testamentdummy@gmail.com>`,
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log("Account created email sent successfully!");
-      return true;
-    } catch (error) {
-      console.error("Error sending email:", error);
-      return false;
-    }
+  const mailOptions = {
+    to,
+    subject: `Account Created – ${appName}`,
+    html,
+    from: `"${appName}" <testamentdummy@gmail.com>`,
   };
 
-  module.exports = { verificationMail, accountCreatedMail };
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Account created email sent successfully!");
+    return true;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return false;
+  }
+};
+
+const verifyOTPMail = async (to, otp) => {
+  const appName = "Healing Care";
+
+  const html = `
+    <div style="font-family: Inter, Arial, sans-serif; background-color:#f8fafc; padding:40px 0;">
+      <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+        
+        <div style="background:#0284c7; padding:20px; text-align:center;">
+          <h2 style="color:#ffffff; margin:0;">${appName}</h2>
+        </div>
+
+        <div style="padding:30px; text-align:center;">
+          <h3 style="color:#0369a1; margin-top:0;">Your Login OTP</h3>
+          <p style="color:#334155;">Enter the following One-Time Password to access your account:</p>
+          
+          <div style="background:#f1f5f9; padding:20px; border-radius:8px; margin:20px 0; display:inline-block;">
+            <h1 style="color:#0f172a; margin:0; letter-spacing:8px; font-weight:700;">${otp}</h1>
+          </div>
+
+          <p style="color:#64748b; font-size:14px;">This OTP is valid for 5 minutes. Do not share it with anyone.</p>
+        </div>
+
+        <div style="background:#f1f5f9; padding:15px; text-align:center;">
+          <p style="margin:0; font-size:12px; color:#64748b;">
+            © ${new Date().getFullYear()} ${appName}. Login Verification.
+          </p>
+        </div>
+
+      </div>
+    </div>
+    `;
+
+  try {
+    await transporter.sendMail({
+      to,
+      subject: `Your Login OTP – ${appName}`,
+      html,
+      from: `"${appName}" <noreply@healingcare.com>`, 
+    });
+    console.log(`OTP email sent to ${to}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending OTP email:", error);
+    return false;
+  }
+};
+
+module.exports = { verificationMail, accountCreatedMail, verifyOTPMail };
+
+

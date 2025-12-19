@@ -4,13 +4,27 @@ const chatSession = require("../models/sessionSchema");
 
 
 async function findMatchfaq(userText) {
-  const words = userText.toLowerCase().trim().split(/\s+/);
-  const faq = await Faq.findOne({
-    isActive: true,
-    keywords: { $in: words }
-  }).sort({ priority: -1 }).limit(1);
+  const userTextLower = userText.toLowerCase();
 
-  return faq;
+  // Find all active FAQs
+  const allFaqs = await Faq.find({ isActive: true }).sort({ priority: -1 });
+
+  // Look for the best match
+  let bestMatch = null;
+
+  for (const faq of allFaqs) {
+    // Check if any keyword exists in the user text
+    const hasMatch = faq.keywords.some(keyword =>
+      userTextLower.includes(keyword.toLowerCase())
+    );
+
+    if (hasMatch) {
+      bestMatch = faq;
+      break; // Since we sorted by priority, the first match is the highest priority
+    }
+  }
+
+  return bestMatch;
 };
 
 

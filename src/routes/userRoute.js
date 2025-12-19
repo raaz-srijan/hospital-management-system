@@ -7,7 +7,8 @@ const {
     updateProfile,
     getAllUsers,
     deleteUser,
-    updateUserRole
+    updateUserRole,
+    verifyLoginOtp
 } = require("../controllers/userController");
 
 const { authenticate } = require("../middleware/authMiddleware");
@@ -18,6 +19,7 @@ const router = express.Router();
 // Public routes
 router.post("/register", register);
 router.post("/login", login);
+router.post("/login/verify-otp", verifyLoginOtp);
 router.get("/verify/:token", verifyEmail);
 
 // Staff routes
