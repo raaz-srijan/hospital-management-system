@@ -1,11 +1,11 @@
 const { authenticator } = require('otplib');
 const crypto = require('crypto');
 
-const key = process.env.OTP_SECRET || 'secretKey';
+const key = process.env.OTP_SECRET ;
 
 const generateHash = (phone) => {
     const otp = authenticator.generate(key);
-    const ttl = 1000 * 60 * 5; // 5 Minutes
+    const ttl = 1000 * 60 * 5; 
     const expires = Date.now() + ttl;
     const data = `${phone}.${otp}.${expires}`;
     const hash = crypto.createHmac('sha256', key).update(data).digest('hex');

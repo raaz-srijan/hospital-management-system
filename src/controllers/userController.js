@@ -18,13 +18,34 @@ async function register(req, res) {
                 message: "Please fill all the required fields",
             });
 
+        // DEBUG: Log the registration attempt
+        console.log("\n" + "=".repeat(60));
+        console.log("📝 REGISTRATION ATTEMPT");
+        console.log("=".repeat(60));
+        console.log("Email:", email);
+        console.log("Name:", name);
+        console.log("Database:", process.env.MONGO_URI);
+        console.log("Checking for existing user...");
+
+        // Check for existing user
         const checkUser = await User.findOne({ email }).populate("role");
 
-        if (checkUser)
+        console.log("Query result:", checkUser ? "USER FOUND" : "NO USER FOUND");
+        if (checkUser) {
+            console.log("Existing user details:");
+            console.log("  - ID:", checkUser._id);
+            console.log("  - Email:", checkUser.email);
+            console.log("  - Name:", checkUser.name);
+            console.log("  - Created:", checkUser.createdAt);
+        }
+        console.log("=".repeat(60) + "\n");
+
+        if (checkUser) {
             return res.status(400).json({
                 success: false,
                 message: "User already registered with this email",
             });
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -40,29 +61,58 @@ async function register(req, res) {
         const newUser = await User.create({
             name,
             email,
-            phone,
-            gender,
+            phone: phone || undefined,
+            gender: gender || undefined,
             password: hashedPassword,
             role: patientRole._id,
             profileModel: "Patient",
         });
 
+        console.log(`New user created: ${newUser.email} (ID: ${newUser._id})`);
+
+        // Handle email verification
         if (req.user && (req.user.role.name === 'admin' || req.user.role.name === 'receptionist')) {
-            await accountCreatedMail(newUser.email, {
+            console.log(`Admin/Receptionist creating account for: ${newUser.email}`);
+            const emailSent = await accountCreatedMail(newUser.email, {
                 name: newUser.name,
                 email: newUser.email,
                 password: password
             });
+
+            if (!emailSent) {
+                console.error(`Failed to send account creation email to ${newUser.email}`);
+            }
+
             newUser.isVerified = true;
             await newUser.save();
         } else {
+            console.log(`Sending verification email to: ${newUser.email}`);
             const token = await generateJWT({ id: newUser._id });
-            await verificationMail(newUser.email, token);
+            const emailSent = await verificationMail(newUser.email, token);
+
+            if (!emailSent) {
+                console.error(`Failed to send verification email to ${newUser.email}`);
+                // Still return success but warn user
+                return res.status(201).json({
+                    success: true,
+                    message: "User registered successfully! However, there was an issue sending the verification email. Please contact support.",
+                    user: {
+                        id: newUser._id,
+                        name: newUser.name,
+                        phone: newUser.phone,
+                        email: newUser.email,
+                        gender: newUser.gender,
+                        role: patientRole.name,
+                    },
+                    emailWarning: true
+                });
+            }
+            console.log(`Verification email sent successfully to ${newUser.email}`);
         }
 
         return res.status(201).json({
             success: true,
-            message: "User registered successfully!",
+            message: "User registered successfully! Please check your email for verification.",
             user: {
                 id: newUser._id,
                 name: newUser.name,
@@ -73,6 +123,16 @@ async function register(req, res) {
             },
         });
     } catch (error) {
+        console.error("Registration error:", error);
+
+        // Handle duplicate key error specifically
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: "User already registered with this email",
+            });
+        }
+
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
@@ -106,21 +166,35 @@ async function login(req, res) {
                 .json({ success: false, message: "Incorrect email or password" });
 
         // Generate OTP
-        const { otp, hash } = generateHash(checkUser.phone); // Using phone for hash salt/validity
+        const phoneForHash = checkUser.phone || email; // Fallback to email if phone not available
+        const { otp, hash } = generateHash(phoneForHash);
+
+        console.log(`Generated OTP for ${email}: ${otp}`); // For debugging - remove in production
 
         // Send OTP via Email
-        await verifyOTPMail(checkUser.email, otp);
+        const emailSent = await verifyOTPMail(checkUser.email, otp);
+
+        if (!emailSent) {
+            console.error(`Failed to send OTP email to ${checkUser.email}`);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send OTP email. Please check your email configuration or try again later.",
+            });
+        }
+
+        console.log(`OTP email sent successfully to ${checkUser.email}`);
 
         return res.status(200).json({
             success: true,
             message: "OTP sent to your email",
             otpSent: true,
             email: checkUser.email,
-            phone: checkUser.phone, // Send phone back as it's needed for verification hash check
+            phone: phoneForHash, // Send the same value used for hash
             hash
         });
 
     } catch (error) {
+        console.error("Login error:", error);
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",

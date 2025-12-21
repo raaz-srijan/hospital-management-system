@@ -2,7 +2,7 @@ const transporter = require("./transporter");
 
 const verificationMail = async (to, token) => {
   const frontendUrl =
-    process.env.FRONTEND_URL || "http://localhost:5173";
+    process.env.FRONTEND_URL 
 
   const appName = "Healing Care";
 
@@ -62,7 +62,7 @@ const verificationMail = async (to, token) => {
       <!-- Footer -->
       <div style="background:#f1f5f9; padding:15px; text-align:center;">
         <p style="margin:0; font-size:12px; color:#64748b;">
-          © ${new Date().getFullYear()} ${appName}. All rights reserved.
+          &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
         </p>
       </div>
 
@@ -91,7 +91,7 @@ const verificationMail = async (to, token) => {
 
 const accountCreatedMail = async (to, { name, email, password }) => {
   const frontendUrl =
-    process.env.FRONTEND_URL || "http://localhost:5173";
+    process.env.FRONTEND_URL;
   const appName = "Healing Care";
 
   const loginUrl = `${frontendUrl}/auth/login`;
