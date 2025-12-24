@@ -7,13 +7,8 @@ app.use(express.json());
 require("dotenv").config();
 
 const cors = require("cors");
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,  
-  methods: "GET, POST, PUT, DELETE",      
-  allowedHeaders: "Content-Type, Authorization", 
-};
 
-app.use(cors(corsOptions)); 
+app.use(cors()); 
 
 const PORT = process.env.PORT;
 const connectDb = require("./config/connectDb");
