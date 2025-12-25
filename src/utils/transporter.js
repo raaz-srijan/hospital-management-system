@@ -1,8 +1,8 @@
 const nodemailer = require("nodemailer");
 
-const transporter = async () => {
+const transporter = () => {
   try {
-    return await nodemailer.createTransport({
+    return nodemailer.createTransport({
       service: "gmail",
       port: 465,
       secure: true,
