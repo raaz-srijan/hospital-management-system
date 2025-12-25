@@ -34,4 +34,3 @@ app.use("/api/web", require("./routes/websiteRoute"));
 app.use("/api/jobs", require("./routes/jobRoute"));
 app.use("/api/stats", require("./routes/statsRoute"));
 
-module.exports = app;
